@@ -3,6 +3,7 @@ const app = express();
 const PORT = 8080;
 const bodyParser = require("body-parser");
 const cookieParser = require('cookie-parser');
+const bcrypt = require('bcryptjs');
 
 app.use(bodyParser.urlencoded({extended: true}));
 app.use(cookieParser());
@@ -13,12 +14,12 @@ const users = {
   "userRandomID": {
     id: "userRandomID",
     email: "user@example.com",
-    password: "purple-monkey-dinosaur"
+    password: bcrypt.hashSync("purple-monkey-dinosaur", 10)
   },
   "user2RandomID": {
     id: "user2RandomID",
     email: "user2@example.com",
-    password: "dishwasher-funk"
+    password: bcrypt.hashSync("dishwasher-funk", 10)
   }
 };
 
@@ -146,7 +147,7 @@ app.post("/login", (req, res) => {
   const password = req.body.password;
 
   for (const key of Object.keys(users)) {
-    if (users[key].email === email && users[key].password === password) {
+    if (users[key].email === email && bcrypt.compareSync(password, users[key].password)) {
       res.cookie("user_id", key);
       return res.redirect("/urls");
     }
@@ -170,19 +171,20 @@ app.post("/register", (req, res) => {
   const randomID = generateRandomString();
   const email = req.body.email;
   const password = req.body.password;
-  if (!email || !password) {
+  const hashedPassword = bcrypt.hashSync(password,10);
+
+  if (!email || !hashedPassword) {
     return res.sendStatus(404);
   }
   console.log(Object.keys(users));
 
   for (const key of Object.keys(users)) {
     if (Object.values(users[key]).indexOf(email) > -1) {
-      console.log(Object.values(users[key]), Object.values(users[key]).indexOf(email));
       return res.sendStatus(404);
     }
   }
 
-  users[randomID] = {id: randomID, email, password};
+  users[randomID] = {id: randomID, email, password: hashedPassword};
   res.cookie("user_id", randomID);
   res.redirect("/urls");
 
